@@ -1058,6 +1058,12 @@
                         <input type="text" id="eventInput" placeholder="새 일정 추가...">
                         <button class="btn btn-blue" id="saveEventBtn" onclick="addEvent()">등록</button>
                     </div>
+                    <div style="display:flex; gap:10px; margin-top:8px; margin-bottom:8px; align-items:center; font-size:0.85rem; color:#475569;">
+                        <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                            <input type="checkbox" id="eventAlarmCheck" onchange="document.getElementById('eventAlarmTime').style.display = this.checked ? 'block' : 'none'"> 🔔 알람 설정
+                        </label>
+                        <input type="time" id="eventAlarmTime" style="display:none; padding:4px; border:1px solid #cbd5e1; border-radius:4px;">
+                    </div>
                     <div class="file-input-wrapper">
                         <label class="file-label" for="eventFile">🖼️ 이미지 첨부</label>
                         <input type="file" id="eventFile" class="file-hidden" accept="image/*"
@@ -1543,6 +1549,9 @@
             editingTodoId = null;
             editingMemoId = null;
             document.getElementById('eventInput').value = '';
+            document.getElementById('eventAlarmCheck').checked = false;
+            document.getElementById('eventAlarmTime').style.display = 'none';
+            document.getElementById('eventAlarmTime').value = '';
             document.getElementById('todoInput').value = '';
             document.getElementById('memoInput').value = '';
             document.getElementById('saveEventBtn').innerText = '등록';
@@ -1757,9 +1766,10 @@
             eventList.innerHTML = '';
             events.filter(e => e && e.date === selectedDateStr).forEach(e => {
                 const li = document.createElement('li'); li.className = 'list-item';
+                const alarmBadge = e.hasAlarm && e.alarmTime ? `<span style="font-size:0.7rem; background:#fef08a; padding:2px 4px; border-radius:4px; margin-left:4px;">⏰ ${e.alarmTime}</span>` : '';
                 li.innerHTML = `
                 <div class="list-item-row">
-                    <span style="flex: 1; word-break: break-all; padding-right: 8px;">📍 ${e.text}</span>
+                    <span style="flex: 1; word-break: break-all; padding-right: 8px;">📍 ${e.text} ${alarmBadge}</span>
                     <div class="action-btns" onclick="stopPropagation(event)">
                         <button class="edit-btn" onclick="editEvent('${e.id}')">수정</button>
                         <button class="delete-btn" onclick="deleteEvent('${e.id}')">삭제</button>
@@ -1815,14 +1825,20 @@
             const input = document.getElementById('eventInput');
             if (!input.value.trim()) return;
 
+            const hasAlarm = document.getElementById('eventAlarmCheck').checked;
+            const alarmTime = document.getElementById('eventAlarmTime').value;
+
             if (editingEventId) {
-                events = events.map(e => sameId(e.id, editingEventId) ? { ...e, text: input.value.trim(), image: currentEventImgBase64 ? currentEventImgBase64 : e.image } : e);
+                events = events.map(e => sameId(e.id, editingEventId) ? { ...e, text: input.value.trim(), hasAlarm, alarmTime, image: currentEventImgBase64 ? currentEventImgBase64 : e.image } : e);
                 editingEventId = null;
                 document.getElementById('saveEventBtn').innerText = '등록';
             } else {
-                events.push({ id: Date.now(), text: input.value.trim(), date: selectedDateStr, image: currentEventImgBase64 });
+                events.push({ id: Date.now(), text: input.value.trim(), date: selectedDateStr, hasAlarm, alarmTime, image: currentEventImgBase64 });
             }
             input.value = '';
+            document.getElementById('eventAlarmCheck').checked = false;
+            document.getElementById('eventAlarmTime').style.display = 'none';
+            document.getElementById('eventAlarmTime').value = '';
             resetImagePreviews();
             saveToStorage();
         }
@@ -1831,6 +1847,19 @@
             const target = events.find(e => e && sameId(e.id, id));
             if (!target) return;
             document.getElementById('eventInput').value = target.text;
+            
+            const alarmCheck = document.getElementById('eventAlarmCheck');
+            const alarmTimeInput = document.getElementById('eventAlarmTime');
+            if (target.hasAlarm) {
+                alarmCheck.checked = true;
+                alarmTimeInput.style.display = 'block';
+                alarmTimeInput.value = target.alarmTime || '';
+            } else {
+                alarmCheck.checked = false;
+                alarmTimeInput.style.display = 'none';
+                alarmTimeInput.value = '';
+            }
+            
             editingEventId = id;
             document.getElementById('saveEventBtn').innerText = '수정';
 
@@ -1939,6 +1968,33 @@
 
         // Initialize application
         initPlanner();
+
+        // ⏰ Alarm checker (30초마다 확인)
+        const notifiedEventIds = new Set();
+        setInterval(() => {
+            const now = new Date();
+            const offset = now.getTimezoneOffset() * 60000;
+            const todayStr = new Date(now.getTime() - offset).toISOString().split('T')[0];
+            const currentHHMM = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+            if (!Array.isArray(events)) return;
+            events.forEach(e => {
+                if (e.hasAlarm && e.date === todayStr && e.alarmTime === currentHHMM) {
+                    if (!notifiedEventIds.has(e.id)) {
+                        notifiedEventIds.add(e.id);
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification("⏰ 일정 알림", { body: e.text });
+                        }
+                        alert(`⏰ [일정 알림]\n\n${e.text}\n시간: ${e.alarmTime}`);
+                    }
+                }
+            });
+        }, 30000);
+
+        // 브라우저 알림 권한 요청
+        if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission();
+        }
     </script>
 </body>
 
