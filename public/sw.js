@@ -1,6 +1,6 @@
 const CACHE_NAME = 'planner-pro-v1';
 const ASSETS = [
-    './memo.html',
+    './index.html',
     './manifest.json',
     './icon-192.jpg',
     './icon-512.jpg'
