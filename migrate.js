@@ -43,10 +43,10 @@ async function migrateData() {
         const jsonData = row.datalist || row.dataList || [];
         
         await pool.query(`
-          INSERT INTO ${table} (username, "dataList") 
+          INSERT INTO ${table} (username, datalist) 
           VALUES ($1, $2) 
           ON CONFLICT (username) 
-          DO UPDATE SET "dataList" = EXCLUDED."dataList"
+          DO UPDATE SET datalist = EXCLUDED.datalist
         `, [row.username, JSON.stringify(jsonData)]);
       }
       totalRows += data.length;

@@ -39,7 +39,7 @@ app.get('/api/data/:type/:username', async (req, res) => {
   }
 
   try {
-    const query = `SELECT "dataList" FROM ${type} WHERE username = $1`;
+    const query = `SELECT datalist as "dataList" FROM ${type} WHERE username = $1`;
     const result = await pool.query(query, [username]);
 
     if (result.rows.length > 0) {
@@ -65,10 +65,10 @@ app.post('/api/data/:type/:username', async (req, res) => {
 
   try {
     const query = `
-      INSERT INTO ${type} (username, "dataList")
+      INSERT INTO ${type} (username, datalist)
       VALUES ($1, $2)
       ON CONFLICT (username)
-      DO UPDATE SET "dataList" = EXCLUDED."dataList"
+      DO UPDATE SET datalist = EXCLUDED.datalist
     `;
     await pool.query(query, [username, JSON.stringify(dataList)]);
     res.json({ success: true, message: '저장 완료' });
