@@ -23,17 +23,21 @@ async function migrateData() {
     // 1. 테이블 자동 생성 (방 만들기)
     console.log("🛠️ 새 데이터베이스에 테이블(방)을 준비하는 중...");
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS memos (
+      DROP TABLE IF EXISTS memos;
+      DROP TABLE IF EXISTS todos;
+      DROP TABLE IF EXISTS events;
+
+      CREATE TABLE memos (
           username TEXT PRIMARY KEY,
-          datalist JSONB DEFAULT '[]'::jsonb
+          "dataList" JSONB DEFAULT '[]'::jsonb
       );
-      CREATE TABLE IF NOT EXISTS todos (
+      CREATE TABLE todos (
           username TEXT PRIMARY KEY,
-          datalist JSONB DEFAULT '[]'::jsonb
+          "dataList" JSONB DEFAULT '[]'::jsonb
       );
-      CREATE TABLE IF NOT EXISTS events (
+      CREATE TABLE events (
           username TEXT PRIMARY KEY,
-          datalist JSONB DEFAULT '[]'::jsonb
+          "dataList" JSONB DEFAULT '[]'::jsonb
       );
     `);
     console.log("✅ 테이블 준비 완료!");
@@ -61,10 +65,10 @@ async function migrateData() {
         const jsonData = row.datalist || row.dataList || [];
         
         await pool.query(`
-          INSERT INTO ${table} (username, datalist) 
+          INSERT INTO ${table} (username, "dataList") 
           VALUES ($1, $2) 
           ON CONFLICT (username) 
-          DO UPDATE SET datalist = EXCLUDED.datalist
+          DO UPDATE SET "dataList" = EXCLUDED."dataList"
         `, [row.username, JSON.stringify(jsonData)]);
       }
       totalRows += data.length;
