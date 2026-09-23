@@ -18,10 +18,28 @@ const pool = new Pool({
 
 async function migrateData() {
   console.log("🚚 데이터 이사(Migration)를 시작합니다...");
-  const tables = ['memos', 'todos', 'events'];
-  let totalRows = 0;
-
+  
   try {
+    // 1. 테이블 자동 생성 (방 만들기)
+    console.log("🛠️ 새 데이터베이스에 테이블(방)을 준비하는 중...");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS memos (
+          username TEXT PRIMARY KEY,
+          datalist JSONB DEFAULT '[]'::jsonb
+      );
+      CREATE TABLE IF NOT EXISTS todos (
+          username TEXT PRIMARY KEY,
+          datalist JSONB DEFAULT '[]'::jsonb
+      );
+      CREATE TABLE IF NOT EXISTS events (
+          username TEXT PRIMARY KEY,
+          datalist JSONB DEFAULT '[]'::jsonb
+      );
+    `);
+    console.log("✅ 테이블 준비 완료!");
+
+    const tables = ['memos', 'todos', 'events'];
+    let totalRows = 0;
     for (const table of tables) {
       console.log(`\n📦 [${table}] 테이블에서 데이터를 가져오는 중...`);
       const { data, error } = await supabase.from(table).select('*');
